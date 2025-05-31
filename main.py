@@ -48,18 +48,18 @@ async def on_message(message):
         Also, when I'm active, please do NOT spam or send too many messages. Else you'd blow up <@{creator_id}>'s computer....I'm still being hosted locally. And <@{creator_id}> owns a potato for a PC.
         Anyway, I'm glad to be here. Multiple improvements coming soon.
         And ye, that's basically everything about me.
-        If you'd like a specific feature just give a shout out to the hottest member on this server (it's <@{creator_id}>)
+        If you'd like a specific feature just give a shout out to <@{creator_id}>
         Tschuss!
         """)
             elif verdict == "PROG":
-                await message.channel.send(f"""I'm still in my very basic state. Although I have a database set up waiting for me. I currently have no access. The only thing I can do right now\nis..........\n\n\nto classify messages (based of static labels atm) and give a guess on what the message's about. \n\nMy secondary purpose is glazing the shit out of <@{creator_id}>....it's basically hardcoded into me..I literally do not have a choice.
+                await message.channel.send(f"""I'm still in my very basic state. Although I have a database set up waiting for me. I currently have no access. The only thing I can do right now\nis..........\n\n\nto classify messages (based of static labels atm) and give a guess on what the message's about. \n\nMy secondary purpose is praising <@{creator_id}>....it's basically hardcoded into me..I literally do not have a choice.
                 """)
             elif verdict == "ZILCH":
                 await message.channel.send("Woah, that's a new one. I have no clue whatsoever what that's about.")
             elif verdict == "BS":
-                await message.channel.send(f"Lol, you see that piece of crap you just wrote? It makes more sense than your entire life. Quit wasting Daddy's (<@{creator_id}>) computer resources ")
+                await message.channel.send(f"please no nonsense")
             elif verdict == "SPAM":
-                await message.channel.send(f"Nigger I will send a fucking fork bomb to your IP address. Processing these queries are resource intensive. Bloody eejit.")
+                await message.channel.send(f"please no spam")
             else:
                 await message.channel.send(f"""Here's my verdict on the message: \n'{user_message}'\n\n sent by '<@{message.author.id}>': \n{verdict}""")
 
