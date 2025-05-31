@@ -48,7 +48,7 @@ async def on_message(message):
     elif user_message.lower() == "bye":
         await message.channel.send(f"Bye {username}")
         return
-    elif user_message.lower().count("ModBotIgnore") >0:
+    elif user_message.lower().count("modbotignore") >0:
         return
 
     try:

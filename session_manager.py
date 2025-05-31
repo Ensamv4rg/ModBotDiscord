@@ -129,7 +129,7 @@ class AIUnique(Process):
     def entry_point(self, sinput):
         try:
             sparams = {"sentence": sinput}
-            resp = requests.get("https://634c-34-125-108-92.ngrok-free.app/determine", params=sparams)
+            resp = requests.get("https://b869-34-125-217-130.ngrok-free.app/determine", params=sparams)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
