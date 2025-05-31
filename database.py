@@ -97,10 +97,9 @@ class DatabaseInit:
 def create_db():
     DatabaseInit()
 
-
 class Active():
 
-    """This Class represents an active session for a server."""
+    """This Class represents an active database session for a server."""
 
     def __init__(self,server_id,minconn=1, maxconn=11):
         self.discord_pool = pool.SimpleConnectionPool(minconn, maxconn, dsn=DATABASE_URL) #Creates a connection pool rather than opening a new connection whenever a new transaction is initiated
@@ -266,4 +265,5 @@ def create_session(server_id=None):
     else:
         session = Active(server_id)
     return session
-        
+
+create_db() 
