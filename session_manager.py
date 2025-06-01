@@ -2,10 +2,8 @@ from database import Active
 import threading
 import requests
 from urllib.parse import quote
-import queue
-import uuid
-import urllib.parse
-
+import time
+import random
 class Session_Manager:
     VALID_MODES = {"unique"}
 
@@ -52,88 +50,116 @@ class Process:
         self.med_task = []
         self.low_task = []
         self.active_thread_count_lock = threading.Lock()
+
         self.__high_task_lock = threading.Lock()
         self.__med_task_lock = threading.Lock()
         self.__low_task_lock = threading.Lock()
+
         self.__priority_locks = {
             'high_task': self.__high_task_lock,
             'med_task': self.__med_task_lock,
             'low_task': self.__low_task_lock
         }
+
         self.tasks = {}
-        self.result_queues = {}  # Map task_id to result queue
-        self.result_queues_lock = threading.Lock()
+        
+        self.results = {}
+        self.results_lock = threading.Lock()
 
     def _check_free(self):
         with self.active_thread_count_lock:
             return self.active_thread_count < self.max_thread_number
 
-    def create_thread(self, task, task_id, priority="low_task"):
+    def create_thread(self,task,priority="low_task"):
+        
+
         if priority not in self.priority_levels:
             raise ValueError(f"Invalid priority: {priority}")
         if not isinstance(task, tuple) or len(task) != 2:
             raise ValueError("Task must be a tuple (task_name, arguments)")
-        task_name, task_args = task
+        
+        task_name,task_args = task
+
         if task_name not in self.tasks:
             raise ValueError(f"Unknown task: {task_name}")
+        
         with self.active_thread_count_lock:
             if self.active_thread_count >= self.max_thread_number:
                 with self.__priority_locks[priority]:
-                    getattr(self, priority).append((task, task_id))
+                    getattr(self, priority).append(task)
                 return
             self.active_thread_count += 1
         
-        def target_wrapper():
-            try:
-                result = self.tasks[task_name](*task_args)
-                with self.result_queues_lock:
-                    if task_id in self.result_queues:
-                        self.result_queues[task_id].put(result)
-            finally:
-                self.clean(task_id)
         
-        t = threading.Thread(target=target_wrapper)
+        t = threading.Thread(target=self.tasks[task_name],args=task_args)
+        with self.results_lock:
+            self.results[task_args[-1]] = "unfinished"
         t.start()
+                
+        
 
-    def clean(self, task_id):
-        with self.active_thread_count_lock:
-            self.active_thread_count -= 1
-        for priority in self.priority_levels:
+    def clean(self):
+        with self.active_thread_count_lock: #Reduces active thread count. Does this before restarting new thread to avoid double counting
+            self.active_thread_count-=1
+            
+        for c in self.priority_levels:
+            priority =c
             with self.__priority_locks[priority]:
-                queue = getattr(self, priority)
-                if queue:
-                    task, queued_task_id = queue.pop(0)
-                    self.create_thread(task, queued_task_id, priority)
+                c = getattr(self,c)
+                if len(c) > 0:
+                    task = c.pop(0)
+                    self.create_thread(task,priority)
                     return
-        # Clean up result queue
-        with self.result_queues_lock:
-            self.result_queues.pop(task_id, None)
 
-    def register_result_queue(self, task_id):
-        result_queue = queue.Queue()
-        with self.result_queues_lock:
-            self.result_queues[task_id] = result_queue
-        return result_queue
+        return 
+
+    
 
 class AIUnique(Process):
     def __init__(self):
         super().__init__(3)
-        methods = ['entry_point']
+        methods = ['entry_point','clear_server_history']
         self.tasks = {method: getattr(self, method) for method in methods}
+        self.public_url = 'https://4607-34-83-245-125.ngrok-free.app'
 
-    def submit_task(self, task, task_id, priority="low_task"):
-        result_queue = self.register_result_queue(task_id)
-        self.create_thread(task, task_id, priority=priority)
-        return result_queue
-
-    def entry_point(self, sinput):
+    def clear_server_history(self,server_id,task_id):
+        url = f"{self.public_url}/clearHistory?server_id={quote(str(server_id))}"
         try:
-            sparams = {"sentence": sinput}
-            resp = requests.get("https://b869-34-125-217-130.ngrok-free.app/determine", params=sparams)
-            resp.raise_for_status()
-            return resp.text
+            response = requests.get(url)
+            response.raise_for_status()
+            response = response.text
+        except Exception as e:
+            print(f"Error connecting to AI server. Error: {e}")
+            response = "Couldn't clear server history. AI module unreachable."
+
+        with self.results_lock:
+            self.results[task_id] = response
+            return
+        
+
+    def entry_point(self, server_id, username, input,task_id=None):
+        try:
+            url = f"{self.public_url}/determine?server_id={quote(str(server_id))}&username={quote(username)}&sentence={quote(input)}"
+
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                response = response.text
+                
+            except Exception as e:
+                print(f"Error connecting to AI Module: {e}")
+                response =  f"AI Model offline for now. Can't process user {username}'s query:\n '{input}'\n right now."
+
+            if task_id:
+                with self.results_lock:
+                    self.results[task_id] = response
+                return 
+            return response
+            
         except Exception as e:
             return f"Error: {e}"
+        finally:
+            self.clean()
 
 class DBUnique(Process):
     def __init__(self, server_id):
